@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { theme } from "../../utils/theme";
 import "./ChatInterface.css";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
@@ -87,7 +86,7 @@ You provide clear, actionable advice based on industry best practices and real-w
 const initialMessage = {
   role: "assistant",
   content:
-    "👋 Hello! I'm your AI Business and Technology Advisor. I can help you with: Business Strategy, Market Analysis, Technical Architecture, Project Management, How can I assist you today?",
+    "👋 Hello! I'm your AI Business and Technology Advisor. I can help you with: Business Strategy, Market Analysis, Technical Architecture, Project Management. How can I assist you today?",
 };
 
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -148,7 +147,8 @@ const ChatInterface = () => {
           ? {
               ...conv,
               messages,
-              title: messages[1]?.content.slice(0, 30) + "...",
+              title:
+                messages[1]?.content?.slice(0, 30) + "..." || "New Chat",
             }
           : conv
       )
@@ -157,11 +157,12 @@ const ChatInterface = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage = { role: "user", content: input };
     const currentMessages = getCurrentMessages();
     const updatedMessages = [...currentMessages, userMessage];
+
     updateCurrentConversation(updatedMessages);
     setInput("");
     setIsLoading(true);
@@ -171,71 +172,56 @@ const ChatInterface = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "text/event-stream",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}`,
         },
         credentials: "include",
         mode: "cors",
         body: JSON.stringify({
           messages: updatedMessages,
-          systemPrompt: systemPrompt,
+          systemPrompt,
         }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-        throw new Error(
-          `Server responded with ${response.status}: ${errorText}`
-        );
-      }
+        let errorMessage = `Server responded with ${response.status}`;
 
-      if (!response.body) {
-        throw new Error("ReadableStream not supported");
-      }
-
-      const reader = response.body.getReader();
-      let partialMessage = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(5);
-            if (data === "[DONE]") return;
-
-            try {
-              const { content, error } = JSON.parse(data);
-              if (error) {
-                throw new Error(error);
-              }
-              if (content) {
-                partialMessage += content;
-                updateCurrentConversation([
-                  ...updatedMessages,
-                  { role: "assistant", content: partialMessage },
-                ]);
-              }
-            } catch (e) {
-              console.error("Error parsing SSE:", e, "Raw data:", data);
-            }
-          }
+        try {
+          const errorData = await response.json();
+          errorMessage += `: ${JSON.stringify(errorData)}`;
+        } catch {
+          errorMessage += `: ${response.statusText}`;
         }
+
+        throw new Error(errorMessage);
       }
+
+      const data = await response.json();
+
+      const assistantMessage = {
+        role: "assistant",
+        content: data.reply || "No response generated.",
+        research: data.research || [],
+      };
+
+      const finalMessages = [...updatedMessages, assistantMessage];
+      updateCurrentConversation(finalMessages);
     } catch (error) {
       console.error("Error:", error);
-      updateCurrentConversation([
-        ...updatedMessages,
-        {
-          role: "assistant",
-          content: `Error: ${error.message}. Please try again or contact support if the issue persists.`,
-        },
-      ]);
+
+      const errorMessage = {
+        role: "assistant",
+        content:
+          `⚠️ Error: ${error.message}\n\n` +
+          `Please try again. If this continues, check:\n` +
+          `- Backend is running on ${apiUrl}\n` +
+          `- Internet connection is active\n` +
+          `- OpenRouter API key is valid\n` +
+          `- SerpAPI key is valid`,
+      };
+
+      const failedMessages = [...updatedMessages, errorMessage];
+      updateCurrentConversation(failedMessages);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -265,6 +251,7 @@ const ChatInterface = () => {
         <button className="new-chat-btn" onClick={createNewChat}>
           <ChatIcon /> Your Chats
         </button>
+
         <div className="conversations-list">
           {conversations.map((conv) => (
             <div
@@ -280,8 +267,9 @@ const ChatInterface = () => {
             </div>
           ))}
         </div>
+
         <div className="user-section">
-          <button className="account-btn" onClick={() => navigate('/blogs')}>
+          <button className="account-btn" onClick={() => navigate("/blogs")}>
             <UserIcon /> Blogs
           </button>
           <button className="logout-btn" onClick={handleLogout}>
@@ -307,7 +295,7 @@ const ChatInterface = () => {
                 <div className="message-content">
                   <ReactMarkdown
                     components={{
-                      code({ node, inline, className, children, ...props }) {
+                      code({ inline, className, children, ...props }) {
                         const match = /language-(\w+)/.exec(className || "");
                         return !inline && match ? (
                           <SyntaxHighlighter
@@ -328,9 +316,36 @@ const ChatInterface = () => {
                   >
                     {message.content}
                   </ReactMarkdown>
+
+                  {message.research && message.research.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        paddingTop: "12px",
+                        borderTop: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <strong>Research Sources:</strong>
+                      <ul style={{ marginTop: "8px", paddingLeft: "18px" }}>
+                        {message.research.map((item, idx) => (
+                          <li key={idx} style={{ marginBottom: "6px" }}>
+                            <a
+                              href={item.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "#90caf9" }}
+                            >
+                              {item.title}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
+
             {isLoading && (
               <div className="message assistant">
                 <div className="loading-indicator">
@@ -340,8 +355,10 @@ const ChatInterface = () => {
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
+
           <form onSubmit={handleSubmit} className="chat-input-container">
             <input
               ref={inputRef}

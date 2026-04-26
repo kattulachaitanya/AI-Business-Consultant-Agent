@@ -1,6 +1,6 @@
 # BusinessTech Advisor AI
 
-> An AI-powered business consultant using Deepseek Chat model, offering real-time expertise in strategy, tech, and management. Basically, this is a sophisticated AI-powered business and technology consulting platform that provides real-time advice on business strategy, market analysis, technical architecture, and project management.
+> An AI-powered business consultant using SerpAPI for search and Deepseek Chat model, offering real-time expertise in strategy, tech, and management. Basically, this is a sophisticated AI-powered business and technology consulting platform that provides real-time advice on business strategy, market analysis, technical architecture, and project management.
 
 ![BusinessTech Advisor AI Interface](./assets/chatbot.png)
 
@@ -15,6 +15,12 @@ BusinessTech Advisor AI is a modern web application that combines advanced AI ca
   - Market research and analysis
   - Technical architecture design
   - Project management guidance
+
+- **Web Search Integration**
+  - Google search results via SerpAPI
+  - Real-time market data
+  - Competitive analysis support
+  - Current information access
 
 - **Modern User Interface**
   - Clean, minimalist design
@@ -47,10 +53,12 @@ BusinessTech Advisor AI is a modern web application that combines advanced AI ca
 ### Backend
 - **Framework**: Express.js
 - **AI Model**: Deepseek Chat (deepseek-chat)
+- **Search API**: SerpAPI for Google search results
 - **Key Features**:
   - RESTful API architecture
   - Server-sent events for real-time communication
   - Deepseek AI integration with streaming responses
+  - SerpAPI integration for web search
   - CORS support
 
 ## Prerequisites
@@ -58,6 +66,7 @@ BusinessTech Advisor AI is a modern web application that combines advanced AI ca
 - Node.js (v14.0.0 or higher)
 - npm or yarn
 - Deepseek API key
+- SerpAPI key
 - Firebase project credentials
 
 ## Installation
@@ -85,6 +94,7 @@ BusinessTech Advisor AI is a modern web application that combines advanced AI ca
 
    # API Keys
    DEEPSEEK_API_KEY=your_deepseek_api_key_here
+   SERPAPI_API_KEY=your_serpapi_api_key_here
    ```
 
 3. **Frontend Setup**
@@ -166,8 +176,14 @@ businesstech-advisor/
 
 ### Chat API
 - `POST /api/chat`
-  - Handles chat completions
+  - Handles chat completions with Deepseek AI
   - Supports streaming responses
+  - Requires authentication
+
+### Search API
+- `POST /api/search`
+  - Performs Google search using SerpAPI
+  - Returns search results
   - Requires authentication
 
 ### Authentication API

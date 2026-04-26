@@ -37,7 +37,8 @@
                 "allow": [
                     "warn",
                     "error",
-                    "info"
+                    "info",
+                    "log"
                 ]
             }
         ]
