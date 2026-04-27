@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import BusinessDashboard from "../BusinessIntel/BusinessDashboard";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "./ChatInterface.css";
@@ -8,56 +9,27 @@ import { useTheme } from "@mui/material/styles";
 import { auth } from "../../firebase.config";
 import { signOut } from "firebase/auth";
 
-// Icons (you can replace these with actual SVG icons)
 const ChatIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
   </svg>
 );
 
 const SendIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
   </svg>
 );
 
 const UserIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
     <circle cx="12" cy="7" r="4"></circle>
   </svg>
 );
 
 const LogoutIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
     <polyline points="16 17 21 12 16 7"></polyline>
     <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -91,6 +63,76 @@ const initialMessage = {
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
+const createFallbackStructuredData = (replyText = "") => {
+  const text = replyText.toLowerCase();
+
+  let marketPotential = 75;
+  let riskLevel = 50;
+  let competitionIntensity = 60;
+  let executionDifficulty = 55;
+  let recommendationScore = 78;
+  let growthOpportunity = 80;
+
+  if (text.includes("high competition")) competitionIntensity = 82;
+  if (text.includes("high risk")) riskLevel = 78;
+  if (text.includes("strong opportunity")) growthOpportunity = 88;
+  if (text.includes("recommended") || text.includes("good opportunity")) {
+    recommendationScore = 85;
+  }
+  if (text.includes("difficult") || text.includes("challenging")) {
+    executionDifficulty = 72;
+  }
+
+  return {
+    metrics: {
+      marketPotential,
+      riskLevel,
+      competitionIntensity,
+      executionDifficulty,
+      recommendationScore,
+      growthOpportunity,
+    },
+    swot: {
+      strengths: [
+        "Growing market demand",
+        "Potential for strong niche positioning",
+      ],
+      weaknesses: [
+        "Requires trust-building and strong execution",
+        "May need upfront effort for early traction",
+      ],
+      opportunities: [
+        "Expanding digital adoption in target market",
+        "Ability to differentiate with specialization",
+      ],
+      threats: [
+        "Established competitors may react quickly",
+        "Customer acquisition costs may rise",
+      ],
+    },
+    risks: [
+      {
+        name: "Market Adoption Risk",
+        likelihood: "Medium",
+        impact: "High",
+        description: "Customer acquisition may be slower than expected",
+      },
+      {
+        name: "Competitive Pressure",
+        likelihood: "High",
+        impact: "Medium",
+        description: "Established players may respond aggressively",
+      },
+      {
+        name: "Execution Risk",
+        likelihood: "Medium",
+        impact: "Medium",
+        description: "Operational complexity may slow scaling",
+      },
+    ],
+  };
+};
+
 const ChatInterface = () => {
   const theme = useTheme();
   const [conversations, setConversations] = useState([
@@ -103,13 +145,12 @@ const ChatInterface = () => {
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  // Check authentication on mount
-  useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      navigate("/login");
-    }
-  }, [navigate]);
+useEffect(() => {
+  const accessToken = localStorage.getItem("accessToken");
+  if (!accessToken) {
+    navigate("/login");
+  }
+}, [navigate]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -124,12 +165,17 @@ const ChatInterface = () => {
   }, [currentConversation]);
 
   const createNewChat = () => {
-    const newId = Math.max(...conversations.map((c) => c.id)) + 1;
+    const newId =
+      conversations.length > 0
+        ? Math.max(...conversations.map((c) => c.id)) + 1
+        : 1;
+
     const newChat = {
       id: newId,
       title: "New Chat",
       messages: [initialMessage],
     };
+
     setConversations([...conversations, newChat]);
     setCurrentConversation(newId);
   };
@@ -147,8 +193,7 @@ const ChatInterface = () => {
           ? {
               ...conv,
               messages,
-              title:
-                messages[1]?.content?.slice(0, 30) + "..." || "New Chat",
+              title: messages[1]?.content?.slice(0, 30) + "..." || "New Chat",
             }
           : conv
       )
@@ -202,6 +247,8 @@ const ChatInterface = () => {
         role: "assistant",
         content: data.reply || "No response generated.",
         research: data.research || [],
+        structured:
+          data.structured || createFallbackStructuredData(data.reply || ""),
       };
 
       const finalMessages = [...updatedMessages, assistantMessage];
@@ -316,6 +363,13 @@ const ChatInterface = () => {
                   >
                     {message.content}
                   </ReactMarkdown>
+
+                  {message.role === "assistant" && message.structured && (
+                    <BusinessDashboard
+                      structured={message.structured}
+                      messageId={index}
+                    />
+                  )}
 
                   {message.research && message.research.length > 0 && (
                     <div

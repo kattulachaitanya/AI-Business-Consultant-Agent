@@ -9,7 +9,7 @@ import BlogEditor from "./components/Blog/BlogEditor";
 import BlogDetail from "./components/Blog/BlogDetail";
 import { theme } from "./utils/theme";
 import { auth } from "./firebase.config";
-import { signInWithEmailAndPassword } from "firebase/auth";
+
 import "./App.css";
 
 const App = () => {

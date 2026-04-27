@@ -9,6 +9,8 @@ import {
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { pink } from "@mui/material/colors";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase.config";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -48,16 +50,22 @@ const Login = () => {
     setError("");
 
     try {
-      const result = await window.handleLogin(creds.email, creds.password);
-      if (result.success) {
-        setCreds({ email: "", password: "" });
-        navigate("/");
-      } else {
-        throw result.error;
-      }
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        creds.email.trim(),
+        creds.password
+      );
+
+      const token = await userCredential.user.getIdToken();
+      localStorage.setItem("accessToken", token);
+
+      setCreds({ email: "", password: "" });
+      navigate("/");
     } catch (error) {
       console.error("Login error:", error.code, error.message);
+
       let errorMessage = "An error occurred during login";
+
       switch (error.code) {
         case "auth/invalid-email":
           errorMessage = "Invalid email address format";
@@ -72,6 +80,10 @@ const Login = () => {
         case "auth/wrong-password":
           errorMessage = "Incorrect password";
           break;
+        case "auth/invalid-credential":
+          errorMessage =
+            "Invalid email or password. Please check your credentials or sign up first.";
+          break;
         case "auth/too-many-requests":
           errorMessage = "Too many failed attempts. Please try again later.";
           break;
@@ -82,6 +94,7 @@ const Login = () => {
         default:
           errorMessage = error.message || "Failed to login. Please try again.";
       }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -94,6 +107,7 @@ const Login = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           My Chatbot Account
         </Typography>
+
         <Typography variant="body1" color="text.secondary" gutterBottom>
           <span style={{ fontWeight: 800, color: "#000" }}>Log in</span> to your
           ChatBot application.
@@ -117,8 +131,9 @@ const Login = () => {
             value={creds.email}
             onChange={handleChange}
             disabled={loading}
-            error={!!error && error.includes("email")}
+            error={!!error && error.toLowerCase().includes("email")}
           />
+
           <TextField
             fullWidth
             required
@@ -130,8 +145,9 @@ const Login = () => {
             value={creds.password}
             onChange={handleChange}
             disabled={loading}
-            error={!!error && error.includes("password")}
+            error={!!error && error.toLowerCase().includes("password")}
           />
+
           <Button
             type="submit"
             variant="contained"
